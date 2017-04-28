@@ -14,6 +14,7 @@ namespace VideoKeywordClipping
     
     class Program
     {
+       
         public struct Time
         {
             public Time(int h_, int m_, float s_)
@@ -47,6 +48,49 @@ namespace VideoKeywordClipping
             public string sentenceCN;
             public Time startTime;
             public Time endTime;
+        }
+
+        static void InvokeCmd(string command)
+        {
+           // command = "cd";
+            System.Diagnostics.ProcessStartInfo procStartInfo =  new System.Diagnostics.ProcessStartInfo("cmd", "/c " + command);
+            Console.WriteLine(command);
+            procStartInfo.RedirectStandardOutput = true;
+            procStartInfo.UseShellExecute = false;
+            //procStartInfo.CreateNoWindow = true;
+            System.Diagnostics.Process proc = new System.Diagnostics.Process();
+            
+            proc.StartInfo = procStartInfo;
+            proc.Start();
+            string result = proc.StandardOutput.ReadToEnd();
+            // Display the command output.
+            Console.WriteLine(result);
+        }
+        static void Clipping(List<SentenceStruct> Sentences, int idx, string keyword)
+        {
+            Time sc = Sentences[idx].startTime;
+            Time ec = Sentences[idx].endTime;
+            if (idx >= 1)
+            {
+                if (Sentences[idx].animeName == Sentences[idx-1].animeName)
+                {
+                    sc = Sentences[idx - 1].startTime;
+                }
+            }
+            if(idx < Sentences.Count-1)
+            {
+                if (Sentences[idx].animeName == Sentences[idx + 1].animeName)
+                {
+                    ec = Sentences[idx + 1].endTime;
+                }
+            }
+            string file_to_clip = Sentences[idx].videoFilePos;
+            //string clip_file = Sentences[idx].clipFilePos + "/"+keyword+"/"+Sentences[idx].sentenceJap + ".mkv";
+            string clip_file = Sentences[idx].clipFilePos +  "/" + Sentences[idx].sentenceJap + ".mkv";
+
+            string invoke_cmd = "ffmpeg -i \"" +  file_to_clip + "\" -ss " + sc.h.ToString() + ":" + sc.m.ToString() + ":" + sc.s.ToString() + " -to " + ec.h.ToString() + ":" + ec.m.ToString() + ":" + ec.s.ToString() + " -c copy " 
+                + "\"" + clip_file + "\"";
+            InvokeCmd(invoke_cmd);
         }
 
         static void parseAssFile(string contents, List<SentenceStruct> Sentences)
@@ -106,6 +150,16 @@ namespace VideoKeywordClipping
                 Sentences.Add(st);
             }
             
+            for(int i = 0; i < keywords.Count; i++)
+            {
+                for(int j = 0; j < Sentences.Count; j++)
+                {
+                    if(Sentences[j].sentenceJap.Contains(keywords[i]))
+                    {
+                        Clipping(Sentences, j, keywords[i]);
+                    }
+                }
+            }
 
 
             Console.WriteLine(videoPoolDir);
